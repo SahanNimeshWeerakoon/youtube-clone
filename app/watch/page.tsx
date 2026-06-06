@@ -3,7 +3,11 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { getVideoDetails, YouTubeVideoDetail } from '@/app/lib/youtube';
+import {
+  getVideoDetails,
+  parseDurationToSeconds,
+  YouTubeVideoDetail,
+} from '@/app/lib/youtube';
 import VideoPlayer from '@/app/components/VideoPlayer';
 import { ChevronLeft } from 'lucide-react';
 
@@ -94,7 +98,12 @@ function WatchContent() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Video Player */}
-          <VideoPlayer videoId={videoId} />
+          <VideoPlayer
+            videoId={videoId}
+            durationSeconds={
+              video?.duration ? parseDurationToSeconds(video.duration) : undefined
+            }
+          />
 
           {/* Video Details */}
           {video && (

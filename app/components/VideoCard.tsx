@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import { YouTubeVideo, formatDuration } from '@/app/lib/youtube';
+import { YouTubeVideo } from '@/app/lib/youtube';
+import ThumbnailPreview from '@/app/components/ThumbnailPreview';
 import { Play } from 'lucide-react';
 
 interface VideoCardProps {
@@ -11,21 +11,18 @@ interface VideoCardProps {
 
 export default function VideoCard({ video }: VideoCardProps) {
   return (
-    <Link
-      href={`/watch?v=${video.id}`}
-      className="group cursor-pointer"
-    >
+    <Link href={`/watch?v=${video.id}`} className="group cursor-pointer">
       <div className="relative mb-3 overflow-hidden rounded-lg bg-gray-900 aspect-video">
-        <Image
-          src={video.thumbnail}
-          alt={video.title}
-          fill
-          className="object-cover group-hover:scale-110 transition duration-300"
+        <ThumbnailPreview
+          videoId={video.id}
+          thumbnail={video.thumbnail}
+          title={video.title}
+          durationSeconds={video.durationSeconds}
         />
-        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition flex items-center justify-center">
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
           <Play
             size={48}
-            className="text-white opacity-0 group-hover:opacity-100 transition"
+            className="text-white opacity-0 group-hover:opacity-100 transition drop-shadow-lg"
             fill="white"
           />
         </div>

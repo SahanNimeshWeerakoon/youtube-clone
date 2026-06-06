@@ -36,8 +36,69 @@ export async function GET(request: NextRequest) {
     };
 
     const response = await axios.get(`${YOUTUBE_API_BASE}/search`, { params });
+    const items = response.data.items ?? [];
 
-    return NextResponse.json(response.data);
+    if (items.length === 0) {
+      return NextResponse.json(response.data);
+    }
+
+    const videoIds = items
+      .map((item: { id: { videoId: string } }) => item.id.videoId)
+      .join(',');
+
+    const detailsResponse = await axios.get(`${YOUTUBE_API_BASE}/videos`, {
+      params: {
+        key: YOUTUBE_API_KEY,
+        id: videoIds,
+        part: 'contentDetails,snippet',
+        fields: 'items(id,contentDetails,snippet(thumbnails))',
+      },
+    });
+
+    type VideoDetails = {
+      id: string;
+      contentDetails: { duration: string };
+      snippet: {
+        thumbnails: { high?: { url: string }; medium: { url: string } };
+      };
+    };
+
+    const detailsMap = new Map<string, VideoDetails>(
+      (detailsResponse.data.items ?? []).map((item: VideoDetails) => [
+        item.id,
+        item,
+      ])
+    );
+
+    const enrichedItems = items.map(
+      (item: {
+        id: { videoId: string };
+        snippet: {
+          title: string;
+          thumbnails: { medium: { url: string } };
+          channelTitle: string;
+          publishedAt: string;
+        };
+      }) => {
+        const id = item.id.videoId;
+        const details = detailsMap.get(id);
+        const thumbnail =
+          details?.snippet?.thumbnails?.high?.url ??
+          details?.snippet?.thumbnails?.medium?.url ??
+          item.snippet.thumbnails.medium.url;
+
+        return {
+          ...item,
+          duration: details?.contentDetails?.duration,
+          thumbnailUrl: thumbnail,
+        };
+      }
+    );
+
+    return NextResponse.json({
+      ...response.data,
+      items: enrichedItems,
+    });
   } catch (error) {
     console.error('Search API error:', error);
     return NextResponse.json(
