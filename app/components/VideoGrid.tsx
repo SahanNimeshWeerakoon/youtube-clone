@@ -16,6 +16,7 @@ export default function VideoGrid({
   onLoadMore,
   hasMore,
 }: VideoGridProps) {
+  console.log({videos});
   if (videos.length === 0 && !isLoading) {
     return (
       <div className="text-center py-12">
@@ -28,10 +29,8 @@ export default function VideoGrid({
     <div className="space-y-8">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {videos.map((video) => {
-          console.log(video);
-          return (
-            <VideoCard key={video.id} video={video} />
-          )
+          if(video.id)
+            return <VideoCard key={video.id ?? video.thumbnail} video={video} />
         })}
       </div>
 

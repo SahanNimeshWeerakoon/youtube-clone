@@ -9,7 +9,8 @@ import {
   YouTubeVideoDetail,
 } from '@/app/lib/youtube';
 import VideoPlayer from '@/app/components/VideoPlayer';
-import { ChevronLeft } from 'lucide-react';
+import CropModal from '@/app/components/CropModal';
+import { ChevronLeft, Scissors } from 'lucide-react';
 
 function WatchContent() {
   const searchParams = useSearchParams();
@@ -18,6 +19,7 @@ function WatchContent() {
   const [video, setVideo] = useState<YouTubeVideoDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCropModal, setShowCropModal] = useState(false);
 
   useEffect(() => {
     if (!videoId) {
@@ -122,6 +124,14 @@ function WatchContent() {
                     {new Date(video.publishedAt).toLocaleDateString()}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowCropModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition shrink-0"
+                >
+                  <Scissors size={16} />
+                  Crop
+                </button>
               </div>
 
               <div className="flex gap-4">
@@ -144,6 +154,17 @@ function WatchContent() {
           )}
         </div>
       </div>
+
+      {showCropModal && videoId && video && (
+        <CropModal
+          videoId={videoId}
+          videoTitle={video.title}
+          durationSeconds={
+            video.duration ? parseDurationToSeconds(video.duration) : undefined
+          }
+          onClose={() => setShowCropModal(false)}
+        />
+      )}
     </div>
   );
 }
