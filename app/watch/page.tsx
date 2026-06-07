@@ -1,6 +1,6 @@
 'use client';
 
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import {
@@ -14,7 +14,6 @@ import { ChevronLeft, Scissors } from 'lucide-react';
 
 function WatchContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const videoId = searchParams.get('v');
   const [video, setVideo] = useState<YouTubeVideoDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,11 +21,7 @@ function WatchContent() {
   const [showCropModal, setShowCropModal] = useState(false);
 
   useEffect(() => {
-    if (!videoId) {
-      setError('No video ID provided');
-      setIsLoading(false);
-      return;
-    }
+    if (!videoId) return;
 
     const fetchVideo = async () => {
       try {

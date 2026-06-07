@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const videoId = body?.videoId as string | undefined;
+    const quality = body?.quality as string | undefined;
 
     if (!videoId || typeof videoId !== 'string' || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
       return NextResponse.json({ error: 'Invalid video ID' }, { status: 400 });
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ready: true, cached: true });
     }
 
-    await downloadVideo(videoId);
+    await downloadVideo(videoId, quality);
 
     return NextResponse.json({ ready: true, cached: false });
   } catch (error) {

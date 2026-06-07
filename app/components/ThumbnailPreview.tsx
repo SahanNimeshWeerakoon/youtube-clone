@@ -30,9 +30,9 @@ export default function ThumbnailPreview({
   const [storyboard, setStoryboard] = useState<StoryboardData | null>(null);
   const [frame, setFrame] = useState<Frame | null>(null);
   const [hoverTime, setHoverTime] = useState(0);
+  const [duration, setDuration] = useState(durationSeconds ?? 0);
   const [loadFailed, setLoadFailed] = useState(false);
   const storyboardRef = useRef<StoryboardData | null>(null);
-  const durationRef = useRef(durationSeconds ?? 0);
 
   const loadStoryboard = useCallback(async () => {
     if (storyboardRef.current || loadFailed) return;
@@ -44,7 +44,7 @@ export default function ThumbnailPreview({
 
       if (!durationSeconds) {
         const level = pickPreviewLevel(data.levels);
-        durationRef.current = estimateDuration(level);
+        setDuration(estimateDuration(level));
       }
     } catch {
       setLoadFailed(true);
@@ -69,16 +69,15 @@ export default function ThumbnailPreview({
     const rect = container.getBoundingClientRect();
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const fraction = x / rect.width;
-    const duration =
-      durationRef.current || estimateDuration(pickPreviewLevel(data.levels));
-    const time = fraction * duration;
+    const previewDuration =
+      duration || estimateDuration(pickPreviewLevel(data.levels));
+    const time = fraction * previewDuration;
 
     setHoverTime(time);
     setFrame(getFrameAtTime(data, time));
   };
 
   const showPreview = isHovering && frame && storyboard && !loadFailed;
-  const duration = durationRef.current || durationSeconds;
 
   return (
     <div

@@ -60,7 +60,7 @@ function runCommand(
   });
 }
 
-export async function downloadVideo(videoId: string): Promise<string> {
+export async function downloadVideo(videoId: string, quality?: string): Promise<string> {
   ensureDirs();
 
   const outputPath = getVideoPath(videoId);
@@ -77,9 +77,20 @@ export async function downloadVideo(videoId: string): Promise<string> {
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     const tempOutput = path.join(VIDEO_DIR, `${videoId}.%(ext)s`);
 
+    // Map quality to yt-dlp format selector
+    const formatMap: Record<string, string> = {
+      '1080p': 'bestvideo[height<=1080][ext=mp4]+bestaudio/best[ext=mp4]/best',
+      '720p': 'bestvideo[height<=720][ext=mp4]+bestaudio/best[ext=mp4]/best',
+      '480p': 'bestvideo[height<=480][ext=mp4]+bestaudio/best[ext=mp4]/best',
+      '360p': 'bestvideo[height<=360][ext=mp4]+bestaudio/best[ext=mp4]/best',
+      best: 'bestvideo[ext=mp4]+bestaudio/best[ext=mp4]/best',
+    };
+
+    const format = quality && formatMap[quality] ? formatMap[quality] : formatMap.best;
+
     await runCommand('yt-dlp', [
       '-f',
-      'best[ext=mp4]/best',
+      format,
       '--merge-output-format',
       'mp4',
       '-o',
@@ -131,12 +142,16 @@ export async function cropVideo(
 
   await runCommand('ffmpeg', [
     '-y',
-    '-i',
-    inputPath,
     '-ss',
     String(startTime),
-    '-to',
-    String(endTime),
+    '-i',
+    inputPath,
+    '-t',
+    String(duration),
+    '-map',
+    '0:v:0',
+    '-map',
+    '0:a:0?',
     '-c',
     'copy',
     '-avoid_negative_ts',

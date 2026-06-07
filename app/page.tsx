@@ -31,7 +31,6 @@ export default function Home() {
 
     setIsLoading(true);
     try {
-      const query = videos[0]?.title || ''; // Get from state if possible
       // This is simplified - in production you'd want to store the query
       const result = await searchVideos('trending', 20, nextPageToken);
       setVideos((prev) => [...prev, ...result.videos]);

@@ -26,6 +26,7 @@ export default function SeekBar({
   const [isHovering, setIsHovering] = useState(false);
   const [hoverTime, setHoverTime] = useState(0);
   const [hoverX, setHoverX] = useState(0);
+  const [barWidth, setBarWidth] = useState(160);
   const [frame, setFrame] = useState<Frame | null>(null);
   const storyboardRef = useRef<StoryboardData | null>(null);
 
@@ -59,6 +60,7 @@ export default function SeekBar({
     const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
     const time = getTimeFromEvent(e.clientX);
 
+    setBarWidth(rect.width);
     setHoverX(x);
     setHoverTime(time);
 
@@ -82,10 +84,7 @@ export default function SeekBar({
   };
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-  const tooltipLeft = Math.max(
-    80,
-    Math.min(hoverX, (barRef.current?.clientWidth ?? 160) - 80)
-  );
+  const tooltipLeft = Math.max(80, Math.min(hoverX, barWidth - 80));
 
   return (
     <div className="relative pt-2">
