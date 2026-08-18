@@ -7,8 +7,11 @@ import { Readable } from 'stream';
 const TEMP_DIR = path.join(os.tmpdir(), 'youtube-clone');
 const VIDEO_DIR = path.join(TEMP_DIR, 'videos');
 const CROP_DIR = path.join(TEMP_DIR, 'crops');
+const YT_DLP_BIN = process.env.YT_DLP_BIN ?? 'yt-dlp';
+const FFMPEG_BIN = process.env.FFMPEG_BIN ?? 'ffmpeg';
 
 const downloadInProgress = new Map<string, Promise<string>>();
+let dependencyCheck: Promise<void> | undefined;
 
 function ensureDirs() {
   fs.mkdirSync(VIDEO_DIR, { recursive: true });
@@ -60,8 +63,23 @@ function runCommand(
   });
 }
 
+async function ensureVideoTools(): Promise<void> {
+  dependencyCheck ??= Promise.all([
+    runCommand(YT_DLP_BIN, ['--version']),
+    runCommand(FFMPEG_BIN, ['-version']),
+  ]).then(() => undefined);
+
+  try {
+    await dependencyCheck;
+  } catch (error) {
+    dependencyCheck = undefined;
+    throw error;
+  }
+}
+
 export async function downloadVideo(videoId: string, quality?: string): Promise<string> {
   ensureDirs();
+  await ensureVideoTools();
 
   const outputPath = getVideoPath(videoId);
   if (fs.existsSync(outputPath)) {
@@ -88,9 +106,15 @@ export async function downloadVideo(videoId: string, quality?: string): Promise<
 
     const format = quality && formatMap[quality] ? formatMap[quality] : formatMap.best;
 
-    await runCommand('yt-dlp', [
+    await runCommand(YT_DLP_BIN, [
       '-f',
       format,
+      '--js-runtimes',
+      'node',
+      '--retries',
+      '3',
+      '--fragment-retries',
+      '3',
       '--merge-output-format',
       'mp4',
       '-o',
@@ -140,7 +164,9 @@ export async function cropVideo(
     throw new Error('End time must be greater than start time');
   }
 
-  await runCommand('ffmpeg', [
+  await ensureVideoTools();
+
+  await runCommand(FFMPEG_BIN, [
     '-y',
     '-ss',
     String(startTime),

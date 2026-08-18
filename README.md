@@ -16,6 +16,23 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Server prerequisites
+
+Video cropping runs `yt-dlp` and `ffmpeg` on the server. The production Docker image
+installs both, including yt-dlp's EJS dependencies, and uses Node.js 22 as the
+JavaScript runtime required for current YouTube extraction:
+
+```bash
+docker build --pull -t youtube-clone .
+docker run --rm -p 3000:3000 --env-file .env.local youtube-clone
+```
+
+Rebuild the image regularly with `--pull` so yt-dlp stays current. For a non-Docker
+deployment, install `ffmpeg` and Python 3, then run
+`python3 -m pip install -U "yt-dlp[default]"`. Node.js 22 or newer must be on
+`PATH`. `YT_DLP_BIN` and `FFMPEG_BIN` can be set when the executables are installed
+outside `PATH`.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
