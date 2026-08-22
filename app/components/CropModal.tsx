@@ -8,6 +8,8 @@ import 'rc-slider/assets/index.css';
 interface CropModalProps {
   videoId: string;
   videoTitle: string;
+  thumbnailUrl?: string;
+  channel?: string;
   durationSeconds?: number;
   onClose: () => void;
 }
@@ -15,6 +17,8 @@ interface CropModalProps {
 export default function CropModal({
   videoId,
   videoTitle,
+  thumbnailUrl,
+  channel,
   durationSeconds,
   onClose,
 }: CropModalProps) {
@@ -28,12 +32,14 @@ export default function CropModal({
   const [endTime, setEndTime] = useState(0);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<string | null>('720p');
   const [assumedDownloadMbps] = useState(20); // used for estimated download time
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [currentTime, setCurrentTime] = useState(0);
+  const [cropName, setCropName] = useState(`${videoTitle} — Clip`);
 
   const videoSrc = `/api/crop/video/${videoId}`;
 
@@ -44,7 +50,13 @@ export default function CropModal({
       const response = await fetch('/api/crop/prepare', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId, quality }),
+        body: JSON.stringify({
+          videoId,
+          quality,
+          title: videoTitle,
+          thumbnailUrl,
+          channel,
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -163,6 +175,7 @@ export default function CropModal({
   const handleDownload = async () => {
     setIsDownloading(true);
     setDownloadError(null);
+    setSaveSuccess(null);
 
     try {
       const response = await fetch('/api/crop/process', {
@@ -173,6 +186,10 @@ export default function CropModal({
           startTime,
           endTime,
           videoDuration: duration > 0 ? duration : undefined,
+          cropName,
+          title: videoTitle,
+          thumbnailUrl,
+          channel,
         }),
       });
 
@@ -181,15 +198,9 @@ export default function CropModal({
         throw new Error(data.error ?? 'Failed to crop video');
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `crop-${videoId}.mp4`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      setSaveSuccess(
+        'Saved locally in the project with the original video. You can play both from Downloaded Videos.'
+      );
     } catch (err) {
       setDownloadError(
         err instanceof Error ? err.message : 'Failed to download cropped video'
@@ -245,9 +256,9 @@ export default function CropModal({
                     Estimated download times assume an average network speed of {assumedDownloadMbps} Mbps.
                   </p>
                   <div className="space-y-2 mb-4">
-                    {['1080p', '720p', '480p', '360p'].map((q) => {
+                    {['1080p', '720p', '480p', '360p', '144p'].map((q) => {
                       const dur = durationSeconds && durationSeconds > 0 ? durationSeconds : 120;
-                      const bitrateMap: Record<string, number> = { '1080p': 8, '720p': 5, '480p': 2.5, '360p': 1.2 };
+                      const bitrateMap: Record<string, number> = { '1080p': 8, '720p': 5, '480p': 2.5, '360p': 1.2, '144p': 0.3 };
                       const mbps = bitrateMap[q] ?? 2.5;
                       const sizeMB = (mbps * dur) / 8;
                       const estSec = (mbps * dur) / assumedDownloadMbps;
@@ -304,7 +315,7 @@ export default function CropModal({
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
                 <p className="text-red-400 text-sm">{prepareError}</p>
                 <p className="text-white/60 text-xs">
-                  Ensure yt-dlp and ffmpeg are installed on the server.
+                  The server may need updated yt-dlp credentials or YouTube access configuration.
                 </p>
               </div>
             )}
@@ -366,6 +377,33 @@ export default function CropModal({
           {/* Scrub bar, time display and speed control */}
           {prepareState === 'ready' && duration > 0 && (
             <div className="space-y-4">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <label
+                  htmlFor="crop-name"
+                  className="mb-1.5 block text-sm font-semibold text-gray-900"
+                >
+                  Name your cropped video
+                </label>
+                <p className="mb-3 text-xs text-gray-500">
+                  This name will be used for the downloaded file and in your video library.
+                </p>
+                <div className="flex items-center rounded-lg border border-gray-300 bg-white px-3 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-100">
+                  <input
+                    id="crop-name"
+                    type="text"
+                    value={cropName}
+                    onChange={(event) => {
+                      setCropName(event.target.value);
+                      setDownloadError(null);
+                    }}
+                    maxLength={100}
+                    placeholder="e.g. My favorite chorus"
+                    className="min-w-0 flex-1 bg-transparent py-2.5 text-sm text-gray-900 outline-none"
+                  />
+                  <span className="ml-2 shrink-0 text-xs text-gray-400">.mp4</span>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm text-gray-700">
                   <span>Crop range</span>
@@ -421,6 +459,11 @@ export default function CropModal({
               {downloadError}
             </p>
           )}
+          {saveSuccess && (
+            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              {saveSuccess}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
@@ -438,7 +481,8 @@ export default function CropModal({
               prepareState !== 'ready' ||
               isDownloading ||
               endTime <= startTime ||
-              duration <= 0
+              duration <= 0 ||
+              !cropName.trim()
             }
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed rounded-lg transition"
           >
@@ -450,7 +494,7 @@ export default function CropModal({
             ) : (
               <>
                 <Download size={16} />
-                Download Crop
+                Save Clip & Original
               </>
             )}
           </button>

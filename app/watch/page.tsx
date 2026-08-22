@@ -10,7 +10,7 @@ import {
 } from '@/app/lib/youtube';
 import VideoPlayer from '@/app/components/VideoPlayer';
 import CropModal from '@/app/components/CropModal';
-import { ChevronLeft, Scissors } from 'lucide-react';
+import { ChevronLeft, Library, Scissors } from 'lucide-react';
 
 function WatchContent() {
   const searchParams = useSearchParams();
@@ -88,6 +88,13 @@ function WatchContent() {
             <span>Back</span>
           </Link>
           <div className="text-2xl font-bold text-red-600">▶ CloneTube</div>
+          <Link
+            href="/downloads"
+            className="ml-auto flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-red-50 hover:text-red-600"
+          >
+            <Library size={17} />
+            <span className="hidden sm:inline">Downloaded Videos</span>
+          </Link>
         </div>
       </div>
 
@@ -154,6 +161,8 @@ function WatchContent() {
         <CropModal
           videoId={videoId}
           videoTitle={video.title}
+          thumbnailUrl={video.thumbnail}
+          channel={video.channel}
           durationSeconds={
             video.duration ? parseDurationToSeconds(video.duration) : undefined
           }

@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
     }
 
     await downloadVideo(videoId, quality);
-
     return NextResponse.json({ ready: true, cached: false });
   } catch (error) {
     console.error('Crop prepare error:', error);

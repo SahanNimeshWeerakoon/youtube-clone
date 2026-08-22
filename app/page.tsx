@@ -4,6 +4,8 @@ import { useState } from 'react';
 import SearchBar from '@/app/components/SearchBar';
 import VideoGrid from '@/app/components/VideoGrid';
 import { searchVideos, YouTubeVideo } from '@/app/lib/youtube';
+import Link from 'next/link';
+import { Library } from 'lucide-react';
 
 export default function Home() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
@@ -47,9 +49,18 @@ export default function Home() {
     <main className="min-h-screen bg-white">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
-          <div className="text-2xl font-bold text-red-600">▶ CloneTube</div>
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center gap-4">
+          <Link href="/" className="text-2xl font-bold text-red-600 whitespace-nowrap">
+            ▶ CloneTube
+          </Link>
           <SearchBar onSearch={handleSearch} isLoading={isLoading} />
+          <Link
+            href="/downloads"
+            className="ml-auto flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+          >
+            <Library size={18} />
+            <span>Downloaded Videos</span>
+          </Link>
         </div>
       </div>
 

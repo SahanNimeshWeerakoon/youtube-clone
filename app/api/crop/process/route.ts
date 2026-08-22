@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  createCropOutputPath,
-  createVideoReadStream,
+  addCropMetadata,
+  createNamedCropOutputPath,
+  createVideoThumbnail,
   cropVideo,
-  deleteFile,
-  getFileStats,
   getVideoPath,
-  nodeStreamToWeb,
+  saveVideoMetadata,
   validateCropTimes,
   videoExists,
 } from '@/app/lib/video-processing';
@@ -23,6 +22,11 @@ export async function POST(request: NextRequest) {
     const endTime = Number(body?.endTime);
     const videoDuration =
       body?.videoDuration !== undefined ? Number(body.videoDuration) : undefined;
+    const cropName = typeof body?.cropName === 'string' ? body.cropName.trim() : '';
+    const title = typeof body?.title === 'string' ? body.title : undefined;
+    const thumbnailUrl =
+      typeof body?.thumbnailUrl === 'string' ? body.thumbnailUrl : undefined;
+    const channel = typeof body?.channel === 'string' ? body.channel : undefined;
 
     if (!videoId || typeof videoId !== 'string' || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
       return NextResponse.json({ error: 'Invalid video ID' }, { status: 400 });
@@ -33,6 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
+    if (!cropName || cropName.length > 100) {
+      return NextResponse.json(
+        { error: 'Enter a video name between 1 and 100 characters' },
+        { status: 400 }
+      );
+    }
+
     if (!videoExists(videoId)) {
       return NextResponse.json(
         { error: 'Video not prepared. Call /api/crop/prepare first.' },
@@ -41,37 +52,29 @@ export async function POST(request: NextRequest) {
     }
 
     const inputPath = getVideoPath(videoId);
-    outputPath = createCropOutputPath(videoId);
+    outputPath = createNamedCropOutputPath(videoId, cropName);
 
     await cropVideo(inputPath, startTime, endTime, outputPath);
+    const thumbnailPath = outputPath.replace(/\.mp4$/i, '.jpg');
+    const savedThumbnail = await createVideoThumbnail(outputPath, thumbnailPath, 0).catch(
+      () => null
+    );
+    await saveVideoMetadata(videoId, { title, thumbnailUrl, channel });
+    const video = addCropMetadata(
+      videoId,
+      outputPath,
+      cropName,
+      startTime,
+      endTime,
+      savedThumbnail
+    );
 
-    const stat = getFileStats(outputPath);
-    const stream = createVideoReadStream(outputPath);
-    const cropOutputPath = outputPath;
-
-    stream.on('close', () => {
-      deleteFile(cropOutputPath);
-    });
-
-    stream.on('error', () => {
-      deleteFile(cropOutputPath);
-    });
-
-    const safeTitle = videoId.replace(/[^a-zA-Z0-9_-]/g, '');
-    const filename = `crop-${safeTitle}.mp4`;
-
-    return new NextResponse(nodeStreamToWeb(stream), {
-      headers: {
-        'Content-Type': 'video/mp4',
-        'Content-Length': String(stat.size),
-        'Content-Disposition': `attachment; filename="${filename}"`,
-      },
+    return NextResponse.json({
+      saved: true,
+      videoId,
+      crop: video.crops.at(-1),
     });
   } catch (error) {
-    if (outputPath) {
-      deleteFile(outputPath);
-    }
-
     console.error('Crop process error:', error);
     const message =
       error instanceof Error ? error.message : 'Failed to crop video';

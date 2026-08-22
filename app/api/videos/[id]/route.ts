@@ -42,7 +42,7 @@ export async function GET(
       id: video.id,
       title: video.snippet.title,
       description: video.snippet.description,
-      thumbnail: video.snippet.thumbnails.high,
+      thumbnail: video.snippet.thumbnails.high.url,
       channel: video.snippet.channelTitle,
       duration: video.contentDetails.duration,
       viewCount: video.statistics.viewCount,

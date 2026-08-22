@@ -33,6 +33,20 @@ deployment, install `ffmpeg` and Python 3, then run
 `PATH`. `YT_DLP_BIN` and `FFMPEG_BIN` can be set when the executables are installed
 outside `PATH`.
 
+YouTube may reject downloads from hosting-provider IP addresses with HTTP 403 even
+when both tools are installed. The downloader retries with token-free YouTube
+clients, but production deployments should provide a Netscape-format cookie file
+through `YT_DLP_COOKIES_FILE`. You can also set `YT_DLP_PROXY` and pass current
+YouTube extractor configuration (including PO-token provider/client settings) in
+`YT_DLP_EXTRACTOR_ARGS`. Keep the cookie file outside the repository and mount it
+read-only into the container, for example:
+
+```bash
+docker run --rm -p 3000:3000 --env-file .env.local \
+  -v /secure/youtube-cookies.txt:/run/secrets/youtube-cookies.txt:ro \
+  -e YT_DLP_COOKIES_FILE=/run/secrets/youtube-cookies.txt youtube-clone
+```
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
