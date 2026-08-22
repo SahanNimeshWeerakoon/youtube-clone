@@ -1,8 +1,8 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
-import { Film, Play, Scissors, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, EllipsisVertical, Film, Play, Repeat2, Scissors, X } from 'lucide-react';
 import type { DownloadedVideo } from '@/app/lib/video-processing';
 
 interface PlayableVideo {
@@ -18,19 +18,44 @@ function formatDuration(seconds: number) {
 
 export default function VideoGroupGallery({ video }: { video: DownloadedVideo }) {
   const [playing, setPlaying] = useState<PlayableVideo | null>(null);
+  const [isLooping, setIsLooping] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (!playing) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setPlaying(null);
+    const handleKeyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (isMenuOpen) setIsMenuOpen(false);
+        else setPlaying(null);
+        return;
+      }
+
+      const target = event.target as HTMLElement | null;
+      const isInteractive =
+        target?.isContentEditable ||
+        ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(target?.tagName ?? '');
+      if ((event.code === 'Space' || event.key === ' ') && !isInteractive) {
+        event.preventDefault();
+        const player = videoRef.current;
+        if (!player) return;
+        if (player.paused) void player.play();
+        else player.pause();
+      }
     };
     document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('keydown', handleKeyboard);
     return () => {
       document.body.style.overflow = '';
-      window.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('keydown', handleKeyboard);
     };
-  }, [playing]);
+  }, [isMenuOpen, playing]);
+
+  const openVideo = (nextVideo: PlayableVideo) => {
+    setIsMenuOpen(false);
+    setIsLooping(false);
+    setPlaying(nextVideo);
+  };
 
   const originalSrc = `/api/downloads/${video.videoId}/file?asset=full`;
   const originalThumbnail = `/api/downloads/${video.videoId}/file?asset=thumbnail`;
@@ -52,7 +77,7 @@ export default function VideoGroupGallery({ video }: { video: DownloadedVideo })
 
         <button
           type="button"
-          onClick={() => setPlaying({ title: video.title, src: originalSrc })}
+          onClick={() => openVideo({ title: video.title, src: originalSrc })}
           className="group grid w-full overflow-hidden rounded-2xl border border-gray-200 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg sm:grid-cols-[minmax(280px,480px)_1fr]"
         >
           <div className="relative aspect-video overflow-hidden bg-gray-900">
@@ -101,7 +126,7 @@ export default function VideoGroupGallery({ video }: { video: DownloadedVideo })
                 <button
                   key={crop.filename}
                   type="button"
-                  onClick={() => setPlaying({ title: crop.name, src: cropSrc })}
+                  onClick={() => openVideo({ title: crop.name, src: cropSrc })}
                   className="group overflow-hidden rounded-xl bg-white text-left shadow-sm ring-1 ring-gray-200 transition hover:-translate-y-0.5 hover:shadow-lg"
                 >
                   <div className="relative aspect-video overflow-hidden bg-gray-900">
@@ -136,22 +161,52 @@ export default function VideoGroupGallery({ video }: { video: DownloadedVideo })
           <div className="w-full max-w-5xl overflow-hidden rounded-2xl bg-[#111] shadow-2xl">
             <div className="flex items-center justify-between gap-4 border-b border-white/10 px-5 py-4 text-white">
               <h2 className="truncate text-sm font-semibold sm:text-base">{playing.title}</h2>
-              <button
-                type="button"
-                onClick={() => setPlaying(null)}
-                className="rounded-full p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
-                aria-label="Close video player"
-              >
-                <X size={20} />
-              </button>
+              <div className="relative flex items-center gap-1">
+                <span className="mr-2 hidden text-xs text-white/45 sm:inline">Space to play/pause</span>
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen((open) => !open)}
+                  className="rounded-full p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Video options"
+                  aria-expanded={isMenuOpen}
+                >
+                  <EllipsisVertical size={20} />
+                </button>
+                {isMenuOpen && (
+                  <div className="absolute right-10 top-11 z-10 w-52 overflow-hidden rounded-xl border border-white/10 bg-[#242424] p-1.5 shadow-2xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLooping((looping) => !looping);
+                        setIsMenuOpen(false);
+                      }}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-white transition hover:bg-white/10"
+                    >
+                      <Repeat2 size={18} />
+                      <span className="flex-1">Loop video</span>
+                      {isLooping && <Check size={17} className="text-red-400" />}
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPlaying(null)}
+                  className="rounded-full p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
+                  aria-label="Close video player"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
             <video
+              ref={videoRef}
               key={playing.src}
               src={playing.src}
               className="aspect-video w-full bg-black"
               controls
               autoPlay
               playsInline
+              loop={isLooping}
             />
           </div>
         </div>
